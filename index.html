@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8" />
+<title>سحب 0.1 SOL - تجربة تعليمية</title>
+<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    direction: rtl;
+    text-align: center;
+    margin-top: 50px;
+  }
+  button {
+    font-size: 18px;
+    padding: 10px 25px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>تجربة سحب 0.1 SOL من محفظتك على Devnet</h1>
+<button id="withdrawBtn">اضغط للسحب</button>
+<p id="status"></p>
+
+<script>
+  const button = document.getElementById("withdrawBtn");
+  const status = document.getElementById("status");
+
+  button.onclick = async () => {
+    status.textContent = "";
+    try {
+      if (!window.solana || !window.solana.isPhantom) {
+        alert("يرجى تثبيت محفظة Phantom أولاً.");
+        return;
+      }
+
+      // الاتصال بمحفظة Phantom
+      const resp = await window.solana.connect();
+      const publicKey = resp.publicKey;
+
+      status.textContent = "تم الاتصال بالمحفظة: " + publicKey.toString();
+
+      // إنشاء اتصال بشبكة Devnet
+      const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
+
+      // عنوان محفظتك المستلمة (غيره إلى عنوانك)
+      const recipient = new solanaWeb3.PublicKey("PUT_YOUR_DEVNET_PUBLIC_KEY_HERE");
+
+      // إنشاء معاملة نقل 0.1 SOL
+      let transaction = new solanaWeb3.Transaction().add(
+        solanaWeb3.SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: recipient,
+          lamports: 0.1 * solanaWeb3.LAMPORTS_PER_SOL,
+        })
+      );
+
+      // إعداد التوقيع والمعاملة
+      transaction.feePayer = publicKey;
+      let { blockhash } = await connection.getRecentBlockhash();
+      transaction.recentBlockhash = blockhash;
+
+      // طلب توقيع المعاملة من Phantom
+      let signed = await window.solana.signTransaction(transaction);
+
+      // إرسال المعاملة بعد التوقيع
+      let signature = await connection.sendRawTransaction(signed.serialize());
+      await connection.confirmTransaction(signature);
+
+      status.textContent = "تم سحب 0.1 SOL بنجاح! \nSignature: " + signature;
+
+    } catch (err) {
+      status.textContent = "حدث خطأ: " + err.message;
+    }
+  };
+</script>
+
+</body>
+</html>
